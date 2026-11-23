@@ -1,5 +1,5 @@
 import { NavLink, useLocation } from 'react-router-dom';
-import { Activity, ExternalLink, LayoutGrid, Settings, type LucideIcon } from 'lucide-react';
+import { Activity, BarChart3, ExternalLink, LayoutGrid, Settings, type LucideIcon } from 'lucide-react';
 import { cn } from '@garage/ui';
 import { BlockIcon, BucketIcon, KeyIcon, NodeIcon, TokenIcon } from '@/lib/entity-icons';
 
@@ -16,14 +16,15 @@ type ClusterNavItem = {
  * popover, and the mobile drawer all render from this list, so they can never
  * drift apart. */
 const clusterNavItems: ClusterNavItem[] = [
-  { to: '', icon: Activity, label: 'Overview', shortLabel: 'Overview', exact: true },
+  { to: '', icon: Activity, label: 'Visão geral', shortLabel: 'Geral', exact: true },
   { to: 'buckets', icon: BucketIcon, label: 'Buckets', shortLabel: 'Buckets' },
-  { to: 'keys', icon: KeyIcon, label: 'Access Keys', shortLabel: 'Keys' },
+  { to: 'relatorios', icon: BarChart3, label: 'Relatórios', shortLabel: 'Relatórios' },
+  { to: 'keys', icon: KeyIcon, label: 'Chaves de acesso', shortLabel: 'Chaves' },
   { to: 'layout', icon: LayoutGrid, label: 'Layout', shortLabel: 'Layout' },
-  { to: 'nodes', icon: NodeIcon, label: 'Nodes', shortLabel: 'Nodes' },
-  { to: 'tokens', icon: TokenIcon, label: 'Admin Tokens', shortLabel: 'Tokens' },
+  { to: 'nodes', icon: NodeIcon, label: 'Nós', shortLabel: 'Nós' },
+  { to: 'tokens', icon: TokenIcon, label: 'Tokens de admin', shortLabel: 'Tokens' },
   { to: 'workers', icon: Settings, label: 'Workers', shortLabel: 'Workers' },
-  { to: 'blocks', icon: BlockIcon, label: 'Blocks', shortLabel: 'Blocks' },
+  { to: 'blocks', icon: BlockIcon, label: 'Blocos', shortLabel: 'Blocos' },
 ];
 
 function NavItemLink({

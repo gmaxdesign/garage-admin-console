@@ -14,6 +14,7 @@ import clusterRouter from './routes/clusters.js';
 import authRouter from './routes/auth.js';
 import proxyRouter from './routes/proxy.js';
 import bucketRouter from './routes/buckets.js';
+import insightsRouter from './routes/insights.js';
 import { authenticateToken } from './middleware/auth.middleware.js';
 
 export const app: Express = express();
@@ -53,3 +54,5 @@ app.use('/api/proxy', authenticateToken, proxyRouter);
 // Bucket Backend API — mounted at /api/clusters/:clusterId/buckets/:bucket
 // (distinct from clusterRouter so the routers stay focused).
 app.use('/api/clusters/:clusterId/buckets/:bucket', authenticateToken, bucketRouter);
+// StockDL fork: Relatórios (busca, uso por pasta, links, downloads).
+app.use('/api/clusters/:clusterId/insights', authenticateToken, insightsRouter);

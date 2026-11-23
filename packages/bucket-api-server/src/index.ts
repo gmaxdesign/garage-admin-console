@@ -11,3 +11,6 @@ export {
   MULTIPART_PART_SIZE_BYTES,
   MULTIPART_MAX_PARTS,
 } from './constants.js';
+// StockDL fork: re-exported for the Admin "Relatórios" (insights) routes.
+export { ListObjectsV2Command, GetObjectCommand } from '@aws-sdk/client-s3';
+export { getSignedUrl } from '@aws-sdk/s3-request-presigner';

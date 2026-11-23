@@ -41,6 +41,7 @@ const AdminTokenDetail = React.lazy(() =>
 const BlockManager = React.lazy(() =>
   import('./pages/cluster/BlockManager').then((m) => ({ default: m.BlockManager })),
 );
+const Reports = React.lazy(() => import('./pages/cluster/Reports'));
 const WorkerManager = React.lazy(() =>
   import('./pages/cluster/WorkerManager').then((m) => ({ default: m.WorkerManager })),
 );
@@ -90,6 +91,7 @@ function App() {
               <Route path="tokens/:tid" element={<AdminTokenDetail />} />
               <Route path="blocks" element={<BlockManager />} />
               <Route path="workers" element={<WorkerManager />} />
+              <Route path="relatorios" element={<Reports />} />
             </Route>
           </Route>
         </Routes>
