@@ -18,8 +18,8 @@ export function LoginPage() {
       logoAlt="S3 Browser"
       title="S3 Browser"
       description="Sign in to manage your S3-compatible connections."
-      onSubmit={async (password) => {
-        const res = await api.post<{ token: string }>('/auth/login', { password });
+      onSubmit={async (credentials) => {
+        const res = await api.post<{ token: string }>('/auth/login', credentials);
         writeStoredToken(res.data.token);
         navigate('/', { replace: true });
       }}

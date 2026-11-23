@@ -1,4 +1,3 @@
-import crypto from 'node:crypto';
 import path from 'node:path';
 import { DatabaseSync, type SQLInputValue } from 'node:sqlite';
 import { fileURLToPath } from 'node:url';
@@ -15,6 +14,7 @@ import express, {
 } from 'express';
 import jwt, { type JwtPayload, type SignOptions } from 'jsonwebtoken';
 import morgan from 'morgan';
+import { LoginLimiter, checkCredentials } from './auth-hardening.js';
 import pino from 'pino';
 import { z } from 'zod';
 
@@ -27,6 +27,9 @@ export interface ServerEnv {
   port: number;
   jwtSecret: string;
   adminPassword: string;
+  adminPasswordHash: string;
+  adminUsername: string;
+  totpSecret: string;
   encryptionKey: string;
   logLevel: string;
   logPretty: boolean;
@@ -43,11 +46,14 @@ export interface ServerEnv {
  * BFF, 3002 for the S3 Browser BFF.
  */
 export function loadEnv(defaultPort: number): ServerEnv {
-  const requiredVars = ['JWT_SECRET', 'ADMIN_PASSWORD', 'ENCRYPTION_KEY'] as const;
-  const missingVars = requiredVars.filter((key) => {
+  const requiredVars = ['JWT_SECRET', 'ENCRYPTION_KEY'] as const;
+  const missingVars: string[] = requiredVars.filter((key) => {
     const value = process.env[key];
     return !value || value.trim() === '';
   });
+  if (!process.env.ADMIN_PASSWORD?.trim() && !process.env.ADMIN_PASSWORD_HASH?.trim()) {
+    missingVars.push('ADMIN_PASSWORD or ADMIN_PASSWORD_HASH');
+  }
 
   if (missingVars.length > 0) {
     throw new Error(`Missing required environment variables: ${missingVars.join(', ')}`);
@@ -107,7 +113,10 @@ export function loadEnv(defaultPort: number): ServerEnv {
     nodeEnv,
     port,
     jwtSecret: process.env.JWT_SECRET as string,
-    adminPassword: process.env.ADMIN_PASSWORD as string,
+    adminPassword: process.env.ADMIN_PASSWORD ?? '',
+    adminPasswordHash: process.env.ADMIN_PASSWORD_HASH?.trim() ?? '',
+    adminUsername: process.env.ADMIN_USERNAME?.trim() ?? '',
+    totpSecret: process.env.ADMIN_TOTP_SECRET?.trim() ?? '',
     encryptionKey,
     logLevel,
     logPretty,
@@ -150,50 +159,62 @@ export function createAuthenticateToken(jwtSecret: string) {
 }
 
 const LoginSchema = z.object({
-  password: z.string(),
+  username: z.string().max(200).optional(),
+  password: z.string().max(1000),
+  otp: z.string().max(20).optional(),
 });
 
 export interface CreateAuthRouterOptions {
   adminPassword: string;
+  adminPasswordHash?: string;
+  adminUsername?: string;
+  totpSecret?: string;
   jwtSecret: string;
   tokenExpiresIn?: SignOptions['expiresIn'];
 }
 
-/**
- * Constant-time credential comparison. Both sides are reduced to a fixed-length
- * SHA-256 digest first, so `timingSafeEqual` never sees mismatched buffer
- * lengths (which would throw, itself leaking length) and the compare time is
- * independent of how many leading characters happen to match.
- */
-function safeEqual(a: string, b: string): boolean {
-  const ah = crypto.createHash('sha256').update(a).digest();
-  const bh = crypto.createHash('sha256').update(b).digest();
-  return crypto.timingSafeEqual(ah, bh);
-}
 
 export function createAuthRouter({
   adminPassword,
+  adminPasswordHash,
+  adminUsername,
+  totpSecret,
   jwtSecret,
-  tokenExpiresIn = '1d',
+  tokenExpiresIn = '12h',
 }: CreateAuthRouterOptions): ExpressRouter {
   const router = Router();
+  const limiter = new LoginLimiter();
+  const cfg = { adminPassword, adminPasswordHash, adminUsername, totpSecret };
 
-  router.post('/login', (req, res) => {
-    try {
-      const { password } = LoginSchema.parse(req.body);
+  // Lets the login screen know which fields to show (no secrets exposed).
+  router.get('/options', (_req, res) => {
+    res.json({ username: Boolean(adminUsername), otp: Boolean(totpSecret) });
+  });
 
-      if (!safeEqual(password, adminPassword)) {
-        return res.status(401).json({ error: 'Invalid credentials' });
-      }
-
-      const token = jwt.sign({ role: 'admin' }, jwtSecret, {
-        expiresIn: tokenExpiresIn,
-        algorithm: 'HS256',
-      });
-      res.json({ token });
-    } catch {
-      res.status(400).json({ error: 'Invalid request' });
+  router.post('/login', async (req, res) => {
+    const ip = req.ip ?? req.socket.remoteAddress ?? 'unknown';
+    const wait = limiter.retryAfter(ip);
+    if (wait > 0) {
+      res.setHeader('Retry-After', String(Math.ceil(wait / 1000)));
+      return res.status(429).json({ error: 'Too many attempts', retryAfterSeconds: Math.ceil(wait / 1000) });
     }
+    let input: z.infer<typeof LoginSchema>;
+    try {
+      input = LoginSchema.parse(req.body);
+    } catch {
+      return res.status(400).json({ error: 'Invalid request' });
+    }
+    if (!checkCredentials(cfg, input)) {
+      limiter.fail(ip);
+      await new Promise((r) => setTimeout(r, 400 + Math.floor(Math.random() * 300)));
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+    limiter.success(ip);
+    const token = jwt.sign({ role: 'admin' }, jwtSecret, {
+      expiresIn: tokenExpiresIn,
+      algorithm: 'HS256',
+    });
+    res.json({ token });
   });
 
   return router;
@@ -457,3 +478,5 @@ export async function runSqliteMigrations<TSchema extends Record<string, unknown
     { migrationsFolder: getMigrationsFolder(importMetaUrl) },
   );
 }
+
+export * from './auth-hardening.js';

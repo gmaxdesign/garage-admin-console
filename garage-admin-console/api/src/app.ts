@@ -18,6 +18,9 @@ import { authenticateToken } from './middleware/auth.middleware.js';
 
 export const app: Express = express();
 
+// Behind Caddy on the same host: take the client IP from X-Forwarded-For.
+app.set('trust proxy', 'loopback');
+
 // Security response headers on every response (API + the served SPA).
 app.use(createSecurityHeaders());
 
