@@ -166,9 +166,9 @@ const LoginSchema = z.object({
 
 export interface CreateAuthRouterOptions {
   adminPassword: string;
-  adminPasswordHash?: string;
-  adminUsername?: string;
-  totpSecret?: string;
+  adminPasswordHash?: string | undefined;
+  adminUsername?: string | undefined;
+  totpSecret?: string | undefined;
   jwtSecret: string;
   tokenExpiresIn?: SignOptions['expiresIn'];
 }

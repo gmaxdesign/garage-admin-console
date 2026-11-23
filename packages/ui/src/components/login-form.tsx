@@ -7,9 +7,9 @@ import { Input } from './input';
 import { Label } from './label';
 
 export interface LoginCredentials {
-  username?: string;
+  username?: string | undefined;
   password: string;
-  otp?: string;
+  otp?: string | undefined;
 }
 
 export interface LoginFormProps {

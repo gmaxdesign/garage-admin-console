@@ -125,16 +125,16 @@ export class LoginLimiter {
 }
 
 export interface CredentialConfig {
-  adminUsername?: string;
-  adminPassword?: string;
-  adminPasswordHash?: string;
-  totpSecret?: string;
+  adminUsername?: string | undefined;
+  adminPassword?: string | undefined;
+  adminPasswordHash?: string | undefined;
+  totpSecret?: string | undefined;
 }
 
 export interface CredentialInput {
-  username?: string;
+  username?: string | undefined;
   password: string;
-  otp?: string;
+  otp?: string | undefined;
 }
 
 /** Checks every configured factor; always evaluates all of them (no early exit). */
